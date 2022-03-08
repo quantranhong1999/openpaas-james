@@ -11,15 +11,15 @@ pipeline {
         }
         stage('Compile') {
             steps {
-                sh 'mvn clean install -Dmaven.javadoc.skip=true -DskipTests -T1C'
+                sh 'mvn clean install -Dmaven.javadoc.skip=true -DskipTests -T2C'
             }
         }
-        stage('Test') {
-            steps {
-                dir("tmail-backend") {
-                    sh 'mvn -B surefire:test'
-                }
-            }
-        }
+//         stage('Test') {
+//             steps {
+//                 dir("tmail-backend") {
+//                     sh 'mvn -B surefire:test'
+//                 }
+//             }
+//         }
     }
 }

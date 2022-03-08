@@ -133,7 +133,7 @@ public class MemoryServer {
             .combineWith(MODULES)
             .combineWith(new UsersRepositoryModuleChooser(new MemoryUsersRepositoryModule())
                 .chooseModules(configuration.getUsersRepositoryImplementation()))
-            .overrideWith(chooseMailbox(configuration.mailboxConfiguration()));
+            .overrideWith(chooseMailbox(configuration.mailboxConfiguration()))
     }
 
     private static class EncryptedMailboxModule extends AbstractModule {
