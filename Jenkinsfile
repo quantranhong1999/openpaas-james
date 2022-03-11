@@ -17,7 +17,7 @@ pipeline {
     }
     post {
         always {
-            build propagate: false, job: 'Gatling Imap build'
+            build job: "Gatling Imap build/master", propagate: false
         }
     }
 }
