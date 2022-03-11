@@ -15,5 +15,9 @@ pipeline {
             }
         }
     }
-
+    post {
+        always {
+            build job: "Gatling Imap build/master", propagate: false, wait=false
+        }
+    }
 }
