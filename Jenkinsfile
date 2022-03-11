@@ -7,7 +7,14 @@ pipeline {
         disableConcurrentBuilds()
     }
     
-
+    stages {
+        stage('Git submodule init') {
+            steps {
+                sh 'git submodule init'
+                sh 'git submodule update'
+            }
+        }
+    }
     post {
         always {
             build propagate: false, job: 'Gatling Imap build'
