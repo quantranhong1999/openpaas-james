@@ -248,6 +248,6 @@ public class DistributedServer {
             return ImmutableList.of(new EncryptedMailboxModule());
         }
 
-        return ImmutableList.of()
+        return ImmutableList.of();
     }
 }
