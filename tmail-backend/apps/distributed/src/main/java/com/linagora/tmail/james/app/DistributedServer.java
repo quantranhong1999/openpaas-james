@@ -247,6 +247,7 @@ public class DistributedServer {
         if (mailboxConfiguration.isEncryptionEnabled()) {
             return ImmutableList.of(new EncryptedMailboxModule());
         }
+        System.out.println("hello");
         return ImmutableList.of();
     }
 }
