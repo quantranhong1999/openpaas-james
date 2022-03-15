@@ -16,8 +16,13 @@ pipeline {
         }
     }
     post {
-        always {
-            build (job: 'Gatling Imap build/master', propagate: false, wait: false)
+        success {
+            script {
+                if (env.BRANCH_NAME == "master") {
+                    build (job: 'Gatling Imap build/master', propagate: false, wait: false)
+                    build (job: 'James Gatling build/master', propagate: false, wait: false)
+                }
+            }
         }
     }
 }
