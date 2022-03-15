@@ -14,6 +14,11 @@ pipeline {
                 sh 'git submodule update'
             }
         }
+        stage('Compile') {
+            steps {
+                sh 'mvn clean install -Dmaven.javadoc.skip=true -DskipTests -T1C'
+            }
+        }
     }
     post {
         success {
