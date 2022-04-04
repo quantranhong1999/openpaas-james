@@ -1,15 +1,15 @@
 package com.linagora.tmail.james.jmap.contact
 
-import com.google.common.collect.{HashMultimap, Multimap, Multimaps}
-import org.apache.james.core.{Domain, MailAddress, Username}
-import org.apache.james.jmap.api.model.AccountId
-import org.reactivestreams.Publisher
-import reactor.core.scala.publisher.{SFlux, SMono}
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
+import com.google.common.collect.{HashMultimap, Multimap, Multimaps}
+import org.apache.james.core.{Domain, MailAddress, Username}
 import org.apache.james.events.Event
 import org.apache.james.events.Event.EventId
+import org.apache.james.jmap.api.model.AccountId
+import org.reactivestreams.Publisher
+import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.OptionConverters._
@@ -27,9 +27,14 @@ case class ContactFields(address: MailAddress, firstname: String = "", surname: 
     address.asString().contains(part) || firstname.contains(part) || surname.contains(part)
 }
 
-case class AccountEmailContact(accountId: String, id: UUID, address: MailAddress) {
-  def this(accountId: AccountId, emailAddressContact: EmailAddressContact) =
-    this(accountId.getIdentifier, emailAddressContact.id, emailAddressContact.fields.address)
+case class UserContactDocument(accountId: String, contactId: UUID, email: MailAddress, firstname: String, surname: String) {
+  def this(accountId: AccountId, contact: EmailAddressContact) =
+    this(accountId.getIdentifier, contact.id, contact.fields.address, contact.fields.firstname, contact.fields.surname)
+}
+
+case class DomainContactDocument(domain: Domain, contactId: UUID, email: MailAddress, firstname: String, surname: String) {
+  def this(domain: Domain, contact: EmailAddressContact) =
+    this(domain, contact.id, contact.fields.address, contact.fields.firstname, contact.fields.surname)
 }
 
 trait EmailAddressContactSearchEngine {

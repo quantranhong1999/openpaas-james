@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linagora.tmail.james.jmap.ESEmailAddressContactSearchEngine;
-import com.linagora.tmail.james.jmap.EmailAddressContactMappingFactory;
+import com.linagora.tmail.james.jmap.UserContactMappingFactory;
 import com.linagora.tmail.james.jmap.contact.EmailAddressContactSearchEngine;
 import com.linagora.tmail.james.jmap.contact.EmailAddressContactSearchEngineContract;
 
@@ -27,10 +27,10 @@ public class ESEmailAddressContactSearchTest implements EmailAddressContactSearc
     void setUp() throws Exception {
         ReactorElasticSearchClient client = elasticSearch.getDockerElasticSearch().clientProvider().get();
         new IndexCreationFactory(ElasticSearchConfiguration.DEFAULT_CONFIGURATION)
-            .useIndex(DEFAULT_CONFIGURATION.getIndexName())
-            .addAlias(DEFAULT_CONFIGURATION.getWriteAliasName())
-            .addAlias(DEFAULT_CONFIGURATION.getReadAliasName())
-            .createIndexAndAliases(client, EmailAddressContactMappingFactory.generateSetting());
+            .useIndex(DEFAULT_CONFIGURATION.getUserContactIndexName())
+            .addAlias(DEFAULT_CONFIGURATION.getUserContactWriteAliasName())
+            .addAlias(DEFAULT_CONFIGURATION.getUserContactReadAliasName())
+            .createIndexAndAliases(client, UserContactMappingFactory.generateSetting(DEFAULT_CONFIGURATION));
 
         searchEngine = new ESEmailAddressContactSearchEngine(client, DEFAULT_CONFIGURATION);
     }
