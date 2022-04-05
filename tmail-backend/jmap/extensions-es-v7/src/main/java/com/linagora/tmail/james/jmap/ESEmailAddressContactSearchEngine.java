@@ -1,9 +1,8 @@
 package com.linagora.tmail.james.jmap;
 
-import java.util.Arrays;
 import java.util.UUID;
-import java.util.function.Function;
 
+import javax.inject.Inject;
 import javax.mail.internet.AddressException;
 
 import org.apache.james.backends.es.v7.DocumentId;
@@ -25,11 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.github.fge.lambdas.Throwing;
+import com.google.common.collect.ImmutableList;
 import com.linagora.tmail.james.jmap.contact.ContactFields;
-import com.linagora.tmail.james.jmap.contact.DomainContactDocument;
 import com.linagora.tmail.james.jmap.contact.EmailAddressContact;
 import com.linagora.tmail.james.jmap.contact.EmailAddressContactSearchEngine;
-import com.linagora.tmail.james.jmap.contact.UserContactDocument;
+import com.linagora.tmail.james.jmap.dto.DomainContactDocument;
+import com.linagora.tmail.james.jmap.dto.UserContactDocument;
 
 import reactor.core.publisher.Mono;
 
@@ -43,6 +43,7 @@ public class ESEmailAddressContactSearchEngine implements EmailAddressContactSea
     private final ElasticSearchContactConfiguration configuration;
     private final ObjectMapper mapper;
 
+    @Inject
     public ESEmailAddressContactSearchEngine(ReactorElasticSearchClient client, ElasticSearchContactConfiguration contactConfiguration) {
         this.client = client;
         this.userContactIndexer = new ElasticSearchIndexer(client, contactConfiguration.getUserContactWriteAliasName());
@@ -71,20 +72,20 @@ public class ESEmailAddressContactSearchEngine implements EmailAddressContactSea
 
     @Override
     public Publisher<EmailAddressContact> autoComplete(AccountId accountId, String part) {
+        var properQuery = QueryBuilders.boolQuery()
+            .must(QueryBuilders.multiMatchQuery(part, "email", "firstname", "surname"))
+            .should(QueryBuilders.termQuery("accountId", accountId.getIdentifier()))
+            .should(QueryBuilders.termQuery("domain", Username.of(accountId.getIdentifier()).getDomainPart()
+                .map(Domain::asString)
+                .orElse("")))
+            .minimumShouldMatch(1);
+
         SearchRequest request = new SearchRequest(configuration.getUserContactReadAliasName().getValue(), configuration.getDomainContactReadAliasName().getValue())
             .source(new SearchSourceBuilder()
-                .query(QueryBuilders.boolQuery()
-                    .must(QueryBuilders.multiMatchQuery(part, "email", "firstname", "surname"))
-                    .should(QueryBuilders.matchQuery("accountId", accountId.getIdentifier()))
-                    .should(QueryBuilders.matchQuery("domain", Username.of(accountId.getIdentifier()).getDomainPart()
-                        .map(Domain::asString)
-                        .orElse("")))
-                    .minimumShouldMatch(1)));
+                .query(properQuery));
 
         return client.search(request, RequestOptions.DEFAULT)
-            .map(searchResponse -> searchResponse.getHits().getHits())
-            .map(Arrays::asList)
-            .flatMapIterable(Function.identity())
+            .flatMapIterable(searchResponse -> ImmutableList.copyOf(searchResponse.getHits().getHits()))
             .map(Throwing.function(this::extractContentFromHit).sneakyThrow());
     }
 
@@ -97,9 +98,9 @@ public class ESEmailAddressContactSearchEngine implements EmailAddressContactSea
     }
 
     private EmailAddressContact extractContentFromHit(SearchHit hit) throws AddressException {
-        return new EmailAddressContact(UUID.fromString(hit.field("contactId").getValue()),
-            new ContactFields(new MailAddress(String.valueOf(hit.field("email").getValue())),
-                hit.field("firstname").getValue(),
-                hit.field("surname").getValue()));
+        return new EmailAddressContact(UUID.fromString((String) hit.getSourceAsMap().get("contactId")),
+            new ContactFields(new MailAddress(((String) hit.getSourceAsMap().get("email"))),
+                (String) hit.getSourceAsMap().get("firstname"),
+                (String) hit.getSourceAsMap().get("surname")));
     }
 }

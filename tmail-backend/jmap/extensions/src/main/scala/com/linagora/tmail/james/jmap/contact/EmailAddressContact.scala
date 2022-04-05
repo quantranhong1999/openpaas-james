@@ -27,15 +27,15 @@ case class ContactFields(address: MailAddress, firstname: String = "", surname: 
     address.asString().contains(part) || firstname.contains(part) || surname.contains(part)
 }
 
-case class UserContactDocument(accountId: String, contactId: UUID, email: MailAddress, firstname: String, surname: String) {
-  def this(accountId: AccountId, contact: EmailAddressContact) =
-    this(accountId.getIdentifier, contact.id, contact.fields.address, contact.fields.firstname, contact.fields.surname)
-}
-
-case class DomainContactDocument(domain: Domain, contactId: UUID, email: MailAddress, firstname: String, surname: String) {
-  def this(domain: Domain, contact: EmailAddressContact) =
-    this(domain, contact.id, contact.fields.address, contact.fields.firstname, contact.fields.surname)
-}
+//case class UserContactDocument(accountId: String, contactId: UUID, email: MailAddress, firstname: String, surname: String) {
+//  def this(accountId: AccountId, contact: EmailAddressContact) =
+//    this(accountId.getIdentifier, contact.id, contact.fields.address, contact.fields.firstname, contact.fields.surname)
+//}
+//
+//case class DomainContactDocument(domain: Domain, contactId: UUID, email: MailAddress, firstname: String, surname: String) {
+//  def this(domain: Domain, contact: EmailAddressContact) =
+//    this(domain, contact.id, contact.fields.address, contact.fields.firstname, contact.fields.surname)
+//}
 
 trait EmailAddressContactSearchEngine {
   def index(accountId: AccountId, fields: ContactFields): Publisher[EmailAddressContact]
