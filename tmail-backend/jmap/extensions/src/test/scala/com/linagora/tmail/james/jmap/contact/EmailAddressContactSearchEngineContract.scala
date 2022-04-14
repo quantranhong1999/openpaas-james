@@ -1,6 +1,6 @@
 package com.linagora.tmail.james.jmap.contact
 
-import com.linagora.tmail.james.jmap.contact.EmailAddressContactSearchEngineContract.{accountId, accountIdB, contactEmptyNameFieldsA, contactEmptyNameFieldsB, contactFieldsA, contactFieldsB, domain, otherContactEmptyNameFields, otherContactFields, otherContactFieldsWithUppercaseEmail}
+import com.linagora.tmail.james.jmap.contact.EmailAddressContactSearchEngineContract.{aDomainTldContact, accountId, accountIdB, contactEmptyNameFieldsA, contactEmptyNameFieldsB, contactFieldsA, contactFieldsB, domain, otherContactEmptyNameFields, otherContactFields, otherContactFieldsWithUppercaseEmail}
 import org.apache.james.core.{Domain, MailAddress, Username}
 import org.apache.james.jmap.api.model.AccountId
 import org.assertj.core.api.Assertions.assertThat
@@ -33,13 +33,30 @@ object EmailAddressContactSearchEngineContract {
   private val otherContactFields: ContactFields = ContactFields(otherMailAddress, otherFirstname, otherSurname)
 
   private val otherMailAddressUpperCase: MailAddress = new MailAddress("JOHNDOE@OTHER.COM")
+  private val aDomainTldAddress: MailAddress = new MailAddress("tung@domain.tld")
   private val otherContactFieldsWithUppercaseEmail: ContactFields = ContactFields(otherMailAddressUpperCase, otherFirstname, otherSurname)
+  private val aDomainTldContact: ContactFields = ContactFields(aDomainTldAddress, otherFirstname, otherSurname)
 }
 
 trait EmailAddressContactSearchEngineContract {
   def testee(): EmailAddressContactSearchEngine
 
   def awaitDocumentsIndexed(documentCount: Long): Unit
+
+  @Test
+  def autoCompleteShouldSupportDomainQuery(): Unit = {
+    SMono(testee().index(accountId, aDomainTldContact)).block()
+    SMono(testee().index(accountId, contactFieldsA)).block()
+
+    awaitDocumentsIndexed(2)
+
+    SoftAssertions.assertSoftly(softly => {
+      softly.assertThat(SFlux.fromPublisher(testee().autoComplete(accountId, "domain.tld")).asJava().map(_.fields).collectList().block())
+        .containsOnly(aDomainTldContact)
+      softly.assertThat(SFlux.fromPublisher(testee().autoComplete(accountId, "linagora.com")).asJava().map(_.fields).collectList().block())
+        .containsOnly(contactFieldsA)
+    })
+  }
 
   @Test
   def indexShouldReturnMatched(): Unit = {
