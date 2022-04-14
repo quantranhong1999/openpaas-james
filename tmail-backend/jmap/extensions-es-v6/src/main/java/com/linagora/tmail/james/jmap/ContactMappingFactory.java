@@ -51,7 +51,7 @@ public class ContactMappingFactory {
                     .startObject("analysis")
                         .startObject(ANALYZER)
                             .startObject(EMAIL_AUTO_COMPLETE_ANALYZER)
-                                .field(TOKENIZER, "uax_url_email")
+                                .field(TOKENIZER, KEYWORD)
                                 .startArray(FILTER)
                                     .value(NGRAM_FILTER)
                                     .value(LOWERCASE)
