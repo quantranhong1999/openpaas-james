@@ -37,7 +37,7 @@ case class FirebaseSubscriptionId(value: UUID) {
 
 case class DeviceClientId(value: String) extends AnyVal
 
-case class FirebaseDeviceToken(value: String) extends AnyVal
+case class FirebaseToken(value: String) extends AnyVal
 
 case class FirebaseSubscriptionExpiredTime(value: ZonedDateTime) {
   def isAfter(date: ZonedDateTime): Boolean = value.isAfter(date)
@@ -46,7 +46,7 @@ case class FirebaseSubscriptionExpiredTime(value: ZonedDateTime) {
 }
 
 case class FirebaseSubscriptionCreationRequest(deviceClientId: DeviceClientId,
-                                               token: FirebaseDeviceToken,
+                                               token: FirebaseToken,
                                                expires: Option[FirebaseSubscriptionExpiredTime] = None,
                                                types: Seq[TypeName]) {
 
@@ -77,7 +77,7 @@ object FirebaseSubscription {
 
 case class FirebaseSubscription(id: FirebaseSubscriptionId,
                                 deviceClientId: DeviceClientId,
-                                token: FirebaseDeviceToken,
+                                token: FirebaseToken,
                                 expires: FirebaseSubscriptionExpiredTime,
                                 types: Seq[TypeName]) {
   def withTypes(types: Seq[TypeName]): FirebaseSubscription = copy(types = types)
