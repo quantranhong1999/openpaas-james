@@ -14,12 +14,14 @@ import com.linagora.tmail.james.app.DockerOpenSearchExtension;
 import com.linagora.tmail.james.app.RabbitMQExtension;
 import com.linagora.tmail.james.common.FirebaseSubscriptionProbeModule;
 import com.linagora.tmail.james.common.FirebaseSubscriptionSetMethodContract;
+import com.linagora.tmail.james.common.FirebaseSubscriptionSetMethodContract$;
 import com.linagora.tmail.james.jmap.firebase.FirebaseModuleChooserConfiguration;
+import com.linagora.tmail.james.jmap.firebase.FirebasePushClient;
 import com.linagora.tmail.module.LinagoraTestJMAPServerModule;
 
 public class DistributedFirebaseSubscriptionSetMethodTest implements FirebaseSubscriptionSetMethodContract {
     @RegisterExtension
-    static JamesServerExtension testExtension = new JamesServerBuilder<DistributedJamesConfiguration>(tmpDir ->
+    JamesServerExtension testExtension = new JamesServerBuilder<DistributedJamesConfiguration>(tmpDir ->
         DistributedJamesConfiguration.builder()
             .workingDirectory(tmpDir)
             .configurationFromClasspath()
@@ -37,6 +39,7 @@ public class DistributedFirebaseSubscriptionSetMethodTest implements FirebaseSub
         .extension(new AwsS3BlobStoreExtension())
         .server(configuration -> DistributedServer.createServer(configuration)
             .overrideWith(new LinagoraTestJMAPServerModule())
-            .overrideWith(new FirebaseSubscriptionProbeModule()))
+            .overrideWith(new FirebaseSubscriptionProbeModule())
+            .overrideWith(binder -> binder.bind(FirebasePushClient.class).toInstance(FirebaseSubscriptionSetMethodContract$.MODULE$.firebasePushClient())))
         .build();
 }
