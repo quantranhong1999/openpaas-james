@@ -17,19 +17,19 @@ class CassandraJmapSettingsRepository @Inject()(dao: CassandraJmapSettingsDAO) e
     val newState: UuidState = JmapSettingsStateFactory.generateState()
     val oldState: UuidState = dao.selectState(username).block()
     SMono.fromCallable(() => {
-      dao.updateSetting(username, Some(newState), Some(settings.settings))
+      dao.updateSetting(username, newState, settings.settings)
+
     }).`then`(SMono.just(SettingsStateUpdate(oldState, newState)))
   }
 
   override def updatePartial(username: Username, settingsPatch: JmapSettingsPatch): Publisher[SettingsStateUpdate] = {
     Preconditions.checkArgument(!settingsPatch.isEmpty, "Cannot update when upsert and remove is empty".asInstanceOf[Object])
     Preconditions.checkArgument(!settingsPatch.isConflict, "Cannot update and remove the same setting key".asInstanceOf[Object])
-    val newState: UuidState = JmapSettingsStateFactory.generateState()
-    val oldState: UuidState = dao.selectState(username).block()
 
-    SMono.fromCallable(() => {
-      dao.updateSetting(username, Some(newState), Some(settingsPatch.toUpsert.settings))
-    }).`then`(SMono.just(SettingsStateUpdate(oldState, newState)))
+    val newState: UuidState = JmapSettingsStateFactory.generateState()
+    dao.selectState(username)
+      .flatMap(oldState => dao.updateSetting(username, newState, settingsPatch.toUpsert.settings)
+        .`then`(SMono.just(SettingsStateUpdate(oldState, newState))))
   }
 }
 
