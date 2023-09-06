@@ -3,6 +3,7 @@ package com.linagora.tmail.james.jmap.settings
 import com.google.common.base.Preconditions
 import com.google.inject.multibindings.Multibinder
 import com.google.inject.{AbstractModule, Scopes}
+import com.linagora.tmail.james.jmap.settings.JmapSettingsStateFactory.INITIAL
 import jakarta.inject.Inject
 import org.apache.james.backends.cassandra.components.CassandraModule
 import org.apache.james.core.Username
@@ -13,14 +14,14 @@ import reactor.core.scala.publisher.SMono
 class CassandraJmapSettingsRepository @Inject()(dao: CassandraJmapSettingsDAO) extends JmapSettingsRepository {
   override def get(username: Username): Publisher[JmapSettings] = dao.selectOne(username)
 
-  override def reset(username: Username, settings: JmapSettingsUpsertRequest): Publisher[SettingsStateUpdate] = {
-    val newState: UuidState = JmapSettingsStateFactory.generateState()
-    val oldState: UuidState = dao.selectState(username).block()
-    SMono.fromCallable(() => {
-      dao.updateSetting(username, newState, settings.settings)
-
-    }).`then`(SMono.just(SettingsStateUpdate(oldState, newState)))
-  }
+  override def reset(username: Username, settings: JmapSettingsUpsertRequest): Publisher[SettingsStateUpdate] =
+    dao.selectState(username)
+      .defaultIfEmpty(INITIAL)
+      .flatMap(oldState => {
+        val newState: UuidState = JmapSettingsStateFactory.generateState()
+        dao.updateSetting(username, newState, settings.settings)
+          .`then`(SMono.just(SettingsStateUpdate(oldState, newState)))
+      })
 
   override def updatePartial(username: Username, settingsPatch: JmapSettingsPatch): Publisher[SettingsStateUpdate] = {
     Preconditions.checkArgument(!settingsPatch.isEmpty, "Cannot update when upsert and remove is empty".asInstanceOf[Object])

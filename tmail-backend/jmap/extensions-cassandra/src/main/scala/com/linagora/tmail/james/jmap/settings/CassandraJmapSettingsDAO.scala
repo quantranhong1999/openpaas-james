@@ -1,6 +1,6 @@
 package com.linagora.tmail.james.jmap.settings
 
-import com.datastax.oss.driver.api.core.`type`.DataTypes.{TEXT, UUID, frozenMapOf, mapOf}
+import com.datastax.oss.driver.api.core.`type`.DataTypes.{TEXT, UUID, mapOf}
 import com.datastax.oss.driver.api.core.`type`.codec.registry.CodecRegistry
 import com.datastax.oss.driver.api.core.`type`.codec.{TypeCodec, TypeCodecs}
 import com.datastax.oss.driver.api.core.cql.{BoundStatementBuilder, PreparedStatement, Row}
@@ -15,7 +15,7 @@ import org.apache.james.core.Username
 import org.apache.james.jmap.core.UuidState
 import reactor.core.scala.publisher.SMono
 
-import scala.collection.immutable.{Map => ImmutableMap}
+import scala.jdk.CollectionConverters._
 
 object CassandraJmapSettingsTable {
   val TABLE_NAME = "settings"
@@ -31,7 +31,7 @@ object CassandraJmapSettingsTable {
       .withColumn(SETTINGS, mapOf(TEXT, TEXT)))
     .build
 
-  val MAP_OF_STRING_CODEC: TypeCodec[java.util.Map[String,String]] = CodecRegistry.DEFAULT.codecFor(frozenMapOf(TEXT, TEXT))
+  val MAP_OF_STRING_CODEC: TypeCodec[java.util.Map[String,String]] = CodecRegistry.DEFAULT.codecFor(mapOf(TEXT, TEXT))
 }
 
 class CassandraJmapSettingsDAO @Inject()(session: CqlSession) {
@@ -79,19 +79,18 @@ class CassandraJmapSettingsDAO @Inject()(session: CqlSession) {
   def selectState(username: Username): SMono[UuidState] =
     SMono.fromPublisher(executor.executeSingleRow(selectOne.bind()
       .set(USER, username.asString(), TypeCodecs.TEXT))
-      .map(toState))
+      .map(row => toState(row)))
 
   def updateSetting(username: Username, newState: UuidState, newSettings: Map[JmapSettingsKey, JmapSettingsValue]): SMono[Void] = {
     val updateStatementBuilder: BoundStatementBuilder = updateStatement.boundStatementBuilder()
     updateStatementBuilder.set(USER, username.asString(), TypeCodecs.TEXT)
-    updateStatementBuilder.set(STATE, newState.toString, TypeCodecs.TEXT)
-    val settings: java.util.Map[String, String] = new java.util.HashMap[String, String]
-    if (newSettings.nonEmpty) {
-      newSettings.foreach {
-        kv => settings.put(kv._1.value.value, kv._2.value)
-      }
-    }
-    updateStatementBuilder.set(SETTINGS, settings, MAP_OF_STRING_CODEC)
+    updateStatementBuilder.setUuid(STATE, newState.value)
+    val settings: java.util.Map[String, String] = newSettings
+      .map(entry => entry._1.asString() -> entry._2.value)
+      .asJava
+
+    updateStatementBuilder.setMap(SETTINGS, settings, classOf[String], classOf[String])
+
     SMono.fromPublisher(executor.executeVoid(updateStatementBuilder.build()))
   }
 
@@ -99,17 +98,18 @@ class CassandraJmapSettingsDAO @Inject()(session: CqlSession) {
     SMono.fromPublisher(executor.executeVoid(deleteOne.bind()
       .set(USER, username.asString(), TypeCodecs.TEXT)))
 
-  private def toJmapSettings(row: Row): JmapSettings =
+  private def toJmapSettings(row: Row): JmapSettings = {
+    // TODO handle possible null state (fallback to INITIAL value), possible null Settings (fallback to empty Map)
     JmapSettings(settings = toSettings(row), state = UuidState(row.get(STATE, TypeCodecs.UUID)))
-
-  private def toSettings(row: Row): Map[JmapSettingsKey, JmapSettingsValue] = {
-    val settings: Map[JmapSettingsKey, JmapSettingsValue] = ImmutableMap.newBuilder[JmapSettingsKey, JmapSettingsValue].result()
-    row.get(SETTINGS, MAP_OF_STRING_CODEC).forEach {
-      case (key, value) => settings + (JmapSettingsKey.liftOrThrow(key) -> JmapSettingsValue(value))
-    }
-    settings
   }
 
-  private def toState(row: Row): UuidState = row.get(STATE, TypeCodecs.TEXT)
-    .map(state => UuidState.fromStringUnchecked(state.toString)).head
+  private def toSettings(row: Row): Map[JmapSettingsKey, JmapSettingsValue] =
+    row.getMap(SETTINGS, classOf[String], classOf[String])
+      .entrySet()
+      .asScala
+      .map(entry => JmapSettingsKey.liftOrThrow(entry.getKey) -> JmapSettingsValue(entry.getValue))
+      .toMap
+
+  private def toState(row: Row): UuidState =
+    UuidState(row.getUuid(STATE))
 }
