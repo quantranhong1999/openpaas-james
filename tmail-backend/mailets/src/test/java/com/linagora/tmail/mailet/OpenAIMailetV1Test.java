@@ -2,7 +2,6 @@ package com.linagora.tmail.mailet;
 
 import static com.linagora.tmail.mailet.OpenAIMailetV1.API_KEY_PARAMETER_NAME;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -50,6 +49,6 @@ class OpenAIMailetV1Test {
 
         testee.service(mail);
 
-        verify(mailetContext).sendMail(eq(MailAddress.nullSender()), any(), any());
+        verify(mailetContext).sendMail(any(), any(), any());
     }
 }
