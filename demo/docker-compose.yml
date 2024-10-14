@@ -16,26 +16,131 @@ services:
     networks:
       - tmail
 
+#  tmail-backend:
+#    image: linagora/tmail-backend:memory-branch-master
+#    container_name: tmail-backend
+#    ports:
+#      - "8000:8000"
+#      - "8001:80"
+#    environment:
+#      - DOMAIN=tmail.com
+#    volumes:
+#      - ./tmail/jwt_publickey:/root/conf/jwt_publickey
+#      - ./tmail/jwt_privatekey:/root/conf/jwt_privatekey
+#      - ./tmail/jmap.properties:/root/conf/jmap.properties
+#      - ./tmail/usersrepository.xml:/root/conf/usersrepository.xml
+#      - ./tmail/mailetcontainer.xml:/root/conf/mailetcontainer.xml
+#      - ./tmail/domainlist.xml:/root/conf/domainlist.xml
+#      - ./tmail/smtpserver.xml:/root/conf/smtpserver.xml
+#      - ./tmail/extensions-jars:/root/extensions-jars
+#    networks:
+#      - tmail
+#    restart: on-failure
+
   tmail-backend:
-    image: linagora/tmail-backend:memory-branch-master
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      opensearch:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      s3:
+        condition: service_started
+      s3.second:
+        condition: service_started
+    image: linagora/tmail-backend:distributed-branch-master
     container_name: tmail-backend
     ports:
       - "8000:8000"
       - "8001:80"
     environment:
       - DOMAIN=tmail.com
+      - JAVA_TOOL_OPTIONS= -Dextra.props=/root/conf/jvm.properties
+    networks:
+      - tmail
     volumes:
+      - ./tmail/jvm.properties:/root/conf/jvm.properties
       - ./tmail/jwt_publickey:/root/conf/jwt_publickey
       - ./tmail/jwt_privatekey:/root/conf/jwt_privatekey
       - ./tmail/jmap.properties:/root/conf/jmap.properties
+      - ./tmail/queue.properties:/root/conf/queue.properties
+      - ./tmail/blob.properties:/root/conf/blob.properties
       - ./tmail/usersrepository.xml:/root/conf/usersrepository.xml
       - ./tmail/mailetcontainer.xml:/root/conf/mailetcontainer.xml
       - ./tmail/domainlist.xml:/root/conf/domainlist.xml
       - ./tmail/smtpserver.xml:/root/conf/smtpserver.xml
       - ./tmail/extensions-jars:/root/extensions-jars
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f -s -o /dev/null 'http://localhost:8000/healthcheck?check=IMAPHealthCheck&check=Cassandra%20backend&strict'" ]
+      interval: 60s
+      timeout: 30s
+      retries: 2
+
+  opensearch:
+    image: opensearchproject/opensearch:2.1.0
+    environment:
+      - discovery.type=single-node
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - DISABLE_SECURITY_PLUGIN=true
     networks:
       - tmail
-    restart: on-failure
+
+#  tika:
+#    image: apache/tika:2.8.0.0
+#    networks:
+#      - tmail
+
+  cassandra:
+    image: cassandra:4.1.3
+    ports:
+      - "9042:9042"
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe keyspaces" ]
+      interval: 10s
+      timeout: 60s
+      retries: 5
+    environment:
+      - JVM_OPTS=-Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.initial_token=1
+    networks:
+      - tmail
+
+  rabbitmq:
+    image: rabbitmq:3.12.1-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - tmail
+
+  s3:
+    image: registry.scality.com/cloudserver/cloudserver:8.7.25
+    container_name: s3.docker.test
+    ports:
+      - "1111:8000"
+    environment:
+      - SCALITY_ACCESS_KEY_ID=accessKey1
+      - SCALITY_SECRET_ACCESS_KEY=secretKey1
+      - S3BACKEND=mem
+      - LOG_LEVEL=trace
+      - REMOTE_MANAGEMENT_DISABLE=1
+    networks:
+      - tmail
+
+  s3.second:
+    image: registry.scality.com/cloudserver/cloudserver:8.7.25
+    container_name: cloudserver-front
+    ports:
+      - "2222:8000"
+    environment:
+      - SCALITY_ACCESS_KEY_ID=accessKey1
+      - SCALITY_SECRET_ACCESS_KEY=secretKey1
+      - S3BACKEND=file
+      - LOG_LEVEL=trace
+      - REMOTE_MANAGEMENT_DISABLE=1
+    networks:
+      - tmail
 
   sso.example.com:
     image: yadd/lemonldap-ng-full

@@ -17,6 +17,7 @@ start_services() {
     docker compose pull || echo "Pulling latest images fail"
     echo "Starting services..."
     docker compose up -d
+    sleep 20
     retvar=$?
     if [[ retvar -eq 0 ]]; then
         echo Provisioning users default identity using LSC...
