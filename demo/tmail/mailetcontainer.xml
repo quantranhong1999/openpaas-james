@@ -30,7 +30,7 @@
 
     <spooler>
         <threads>20</threads>
-        <errorRepository>memory://var/mail/error/</errorRepository>
+        <errorRepository>cassandra://var/mail/error/</errorRepository>
     </spooler>
 
     <processors>
@@ -48,7 +48,7 @@
             </mailet>
             <mailet match="All" class="Bounce"/>
             <mailet match="All" class="ToRepository">
-                <repositoryPath>memory://var/mail/error/</repositoryPath>
+                <repositoryPath>cassandra://var/mail/error/</repositoryPath>
                 <onMailetException>propagate</onMailetException>
             </mailet>
         </processor>
@@ -97,12 +97,12 @@
                 <consume>false</consume>
             </mailet>
 
-            <!-- Put the OpenAIMailet after LocalDelivery so the GPT reply would come after the asking question -->
-            <mailet match="com.linagora.tmail.mailet.RecipientsContain=gpt@tmail.com" class="com.linagora.tmail.mailet.AIBotMailet">
-                <apiKey>demo</apiKey>
-                <botAddress>gpt@tmail.com</botAddress>
-                <model>gpt-4o-mini</model>
-            </mailet>
+<!--            &lt;!&ndash; Put the OpenAIMailet after LocalDelivery so the GPT reply would come after the asking question &ndash;&gt;-->
+<!--            <mailet match="com.linagora.tmail.mailet.RecipientsContain=gpt@tmail.com" class="com.linagora.tmail.mailet.AIBotMailet">-->
+<!--                <apiKey>demo</apiKey>-->
+<!--                <botAddress>gpt@tmail.com</botAddress>-->
+<!--                <model>gpt-4o-mini</model>-->
+<!--            </mailet>-->
         </processor>
 
         <processor state="relay" enableJmx="true">
@@ -128,7 +128,7 @@
                 <attachment>none</attachment>
             </mailet>
             <mailet match="All" class="ToRepository">
-                <repositoryPath>memory://var/mail/address-error/</repositoryPath>
+                <repositoryPath>cassandra://var/mail/address-error/</repositoryPath>
             </mailet>
         </processor>
 
@@ -140,7 +140,7 @@
                 <attachment>none</attachment>
             </mailet>
             <mailet match="All" class="ToRepository">
-                <repositoryPath>memory://var/mail/relay-denied/</repositoryPath>
+                <repositoryPath>cassandra://var/mail/relay-denied/</repositoryPath>
                 <notice>Warning: You are sending an e-mail to a remote server. You must be authenticated to perform such an operation</notice>
             </mailet>
         </processor>
@@ -163,7 +163,7 @@
 
         <processor state="rrt-error" enableJmx="false">
             <mailet match="All" class="ToRepository">
-                <repositoryPath>memory://var/mail/rrt-error/</repositoryPath>
+                <repositoryPath>cassandra://var/mail/rrt-error/</repositoryPath>
                 <passThrough>true</passThrough>
             </mailet>
             <mailet match="IsSenderInRRTLoop" class="Null"/>

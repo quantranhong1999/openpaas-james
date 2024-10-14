@@ -8,6 +8,10 @@ Run `./dev.sh start` to start all services and propagate configurations.
 
 You can check the logs by this command: `docker compose logs -f`.
 
+The webadmin port should be exposed to port 8000. If you just work with webadmin API, do not care the following steps.
+
+To stop the docker compose, you can run `./dev.sh stop`.
+
 ## Local set up
 
 Please add the following lines to your `/etc/hosts`:
